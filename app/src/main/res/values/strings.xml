@@ -1,0 +1,14 @@
+<resources>
+<string name="app_name">SeoulCoolPlace</string>
+<string name="check_internet">Check your Internet connection.</string>
+<string name="check">OK</string>
+<string name="cancel">Cancel</string>
+<string name="check_gps">GPS is off.</string>
+<string name="check_permission">Check location permission.</string>
+<string name="alert_location_permission">You did not agree to a location permission.</string>
+<string name="map_initialization">Map Initializing ...</string>
+<string name="enter_here">Search here.</string>
+
+<!--    <string name="google_maps_key">AIzaSyA0mgiiq8G4d3SRa9YiZ3aZbXiFYfwgz9I</string>-->
+
+</resources>
