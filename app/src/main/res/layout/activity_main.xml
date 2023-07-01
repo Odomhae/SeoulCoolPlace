@@ -28,11 +28,12 @@
         android:layout_height="wrap_content"
         android:clickable="true"
         android:focusable="true"
-        app:fabSize="mini"
+        android:backgroundTint="@color/blue"
+        app:fabSize="normal"
         app:srcCompat="@android:drawable/ic_menu_mylocation"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginEnd="8dp"
-        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="12dp"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 

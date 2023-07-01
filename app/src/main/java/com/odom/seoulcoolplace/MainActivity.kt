@@ -45,7 +45,7 @@ class MainActivity : AppCompatActivity() {
     )
 
     val REQUEST_PERMISSION_CODE = 1
-    val DEFAULT_ZOOM_LEVEL = 18f
+    val DEFAULT_ZOOM_LEVEL = 16f
     val CITY_HALL = LatLng(37.566648, 126.978449)
     var googleMap: GoogleMap? = null
 
