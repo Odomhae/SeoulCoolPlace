@@ -227,23 +227,23 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         mapView.onResume()
         //  앱 AsyncTask 중지되었으면
-        if(ToiletReadTask().status == AsyncTask.Status.FINISHED)
-            ToiletReadTask().execute()
+        if(CoolPlaceTask().status == AsyncTask.Status.FINISHED)
+            CoolPlaceTask().execute()
     }
     override fun onPause() {
         mapView.onPause()
         super.onPause()
         // 앱 AsyncTask도 pause
-        if(ToiletReadTask().status == AsyncTask.Status.RUNNING)
-            ToiletReadTask().cancel(true)
+        if(CoolPlaceTask().status == AsyncTask.Status.RUNNING)
+            CoolPlaceTask().cancel(true)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDestroy()
         // 앱 종료시 AsyncTask도 종료
-        if(ToiletReadTask().status == AsyncTask.Status.RUNNING)
-            ToiletReadTask().cancel(true)
+        if(CoolPlaceTask().status == AsyncTask.Status.RUNNING)
+            CoolPlaceTask().cancel(true)
     }
 
     override fun onLowMemory() {
@@ -252,17 +252,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 서울 열린 데이터 광장 발급 키
-    val API_KEY = "4a4f64704a6a69683531797672504b"
+    val API_KEY = "6e7364446f6a6968313032694b695252"
 
-    var task: ToiletReadTask ?= null
-    // 화장실 정보 저장할 배열
-    var toilets = JSONArray()
+    var task: CoolPlaceTask ?= null
+    // 쉼터 정보 저장할 배열
+    var placeArray = JSONArray()
     // JSONobject를 키로 MyItem 객체를 저장할 맵
     val itemMap = mutableMapOf<JSONObject, MyItem>()
 
-    // 화장실 이미지
+    // 이미지
     val bitmap by lazy {
-        val drawable = resources.getDrawable(R.drawable.toilet_sign) as BitmapDrawable
+        val drawable = resources.getDrawable(R.drawable.img_flake) as BitmapDrawable
         Bitmap.createScaledBitmap(drawable.bitmap, 64, 64, false)
     }
 
@@ -272,12 +272,12 @@ class MainActivity : AppCompatActivity() {
             this.put(anotherArray.get(i))
     }
 
-    // 화장실 정보를 읽어와서 JSONobject로 변환
+    // 쉼터 정보를 읽어와서 JSONobject로 변환
     fun readData(startIndex:Int, lastIndex:Int) : JSONObject {
         val url =
             URL(
-                "http://openAPI.seoul.go.kr:8088" + "/" +
-                        "${API_KEY}/json/SearchPublicToiletPOIService/${startIndex}/${lastIndex}"
+                "http://openapi.seoul.go.kr:8088" + "/" +
+                        "${API_KEY}/json/TbGtnHwcwP/${startIndex}/${lastIndex}"
             )
         val connection = url.openConnection()
 
@@ -285,9 +285,9 @@ class MainActivity : AppCompatActivity() {
         return JSONObject(data)
     }
 
-    // 화장실 데이터를 읽어오는 AsyncTask
+    // 쉼터 데이터를 읽어오는 AsyncTask
     @SuppressLint("StaticFieldLeak")
-    inner class ToiletReadTask : AsyncTask<Void, JSONArray, String>() {
+    inner class CoolPlaceTask : AsyncTask<Void, JSONArray, String>() {
 
         val asyncDialog : ProgressDialog = ProgressDialog(this@MainActivity)
 
@@ -295,8 +295,8 @@ class MainActivity : AppCompatActivity() {
         override fun onPreExecute() {
             // 구글맵 마커 초기화
             googleMap?.clear()
-            // 화장실 정보 초기화
-            toilets = JSONArray()
+            // 쉼터 정보 초기화
+            placeArray = JSONArray()
             // itemMap 변수 초기화
             itemMap.clear()
             asyncDialog.setProgressStyle(ProgressDialog.BUTTON_POSITIVE)
@@ -325,13 +325,14 @@ class MainActivity : AppCompatActivity() {
 
                 val jsonObject = readData(startIndex, lastIndex)
 
-                totalCnt = jsonObject.getJSONObject("SearchPublicToiletPOIService")
+                totalCnt = jsonObject.getJSONObject("TbGtnHwcwP")
                     .getInt("list_total_count")
                 //
+                Log.d("===ttt " , totalCnt.toString())
                 val rows =
-                    jsonObject.getJSONObject("SearchPublicToiletPOIService").getJSONArray("row")
+                    jsonObject.getJSONObject("TbGtnHwcwP").getJSONArray("row")
                 // 기존에 읽었던 데이터와 병합
-                toilets.merge(rows)
+                placeArray.merge(rows)
                 // UI 업데이트를 위해 progress 발행
                 publishProgress(rows)
 
@@ -360,10 +361,10 @@ class MainActivity : AppCompatActivity() {
             // 자동완성 텍스트뷰에서 사용할 텍스트 리스트
             val textList = mutableListOf<String>()
 
-            // 모든 화장실의 이름을 리스트에 추가
-            for(i in 0 until toilets.length()){
-                val toilet = toilets.getJSONObject(i)
-                textList.add(toilet.getString("FNAME"))
+            // 모든 쉼터 이름을 리스트에 추가
+            for(i in 0 until placeArray.length()){
+                val place = placeArray.getJSONObject(i)
+                textList.add(place.getString("R_AREA_NM"))
             }
 
             // 자동완성 텍스트뷰의 어댑터 추가
@@ -396,7 +397,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         task?.cancel(true)
-        task = ToiletReadTask()
+        task = CoolPlaceTask()
 
         // 인터넷 연결이 있을시에만 AsyncTask 실행★
         if(checkInternetConnection()){
@@ -413,7 +414,7 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
 
             // 검색 키워드에 해당하는 jsonobject 검색
-            toilets.findByChildProperty("FNAME", word)?.let{
+            placeArray.findByChildProperty("R_AREA_NM", word)?.let{
                 val myItem = itemMap[it]
 
                 // clusterRenderer에서 myItem을 기반으로 마커 검색
@@ -423,7 +424,7 @@ class MainActivity : AppCompatActivity() {
                 // 마커 위치로 카메라 이동
                 googleMap?.moveCamera(
                     CameraUpdateFactory.newLatLngZoom(
-                        LatLng(it.getDouble("Y_WGS84"), it.getDouble("X_WGS84")), DEFAULT_ZOOM_LEVEL
+                        LatLng(it.getDouble("LA"), it.getDouble("LO")), DEFAULT_ZOOM_LEVEL
                     )
                 )
                 clusterManager?.cluster()
@@ -442,25 +443,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 마커 추가
-    fun addMarkers(toilets : JSONObject){
+    fun addMarkers(coolPlace : JSONObject){
         val item = MyItem(
-            LatLng(toilets.getDouble("Y_WGS84"), toilets.getDouble("X_WGS84")),
-            toilets.getString("FNAME"),
-            toilets.getString("ANAME"),
+            LatLng(coolPlace.getDouble("LA"), coolPlace.getDouble("LO")),
+            coolPlace.getString("R_AREA_NM"),
+            coolPlace.getString("R_DETL_ADD"),
             BitmapDescriptorFactory.fromBitmap(bitmap)
         )
 
         // clusterManager를 이용해 마커 추가
         clusterManager?.addItem(
             MyItem(
-                LatLng(toilets.getDouble("Y_WGS84"), toilets.getDouble("X_WGS84")),
-                toilets.getString("FNAME"),
-                toilets.getString("ANAME"),
+                LatLng(coolPlace.getDouble("LA"), coolPlace.getDouble("LO")),
+                coolPlace.getString("R_AREA_NM"),
+                coolPlace.getString("R_DETL_ADD"),
                 BitmapDescriptorFactory.fromBitmap(bitmap)
             )
         )
 
         //
-        itemMap.put(toilets, item)
+        itemMap.put(coolPlace, item)
     }
 }
