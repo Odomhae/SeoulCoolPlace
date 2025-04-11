@@ -2,6 +2,7 @@ package com.odom.seoulcoolplace
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.ProgressDialog
 import android.content.Context
 import android.content.Intent
@@ -28,6 +29,9 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.tasks.Task
+import com.google.android.play.core.review.ReviewInfo
+import com.google.android.play.core.review.ReviewManagerFactory
 import com.google.maps.android.clustering.ClusterManager
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.search_bar.view.*
@@ -48,6 +52,8 @@ class MainActivity : AppCompatActivity() {
     val DEFAULT_ZOOM_LEVEL = 16f
     val CITY_HALL = LatLng(37.566648, 126.978449)
     var googleMap: GoogleMap? = null
+
+    private var lastBackPressed: Long = 0
 
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
@@ -364,7 +370,7 @@ class MainActivity : AppCompatActivity() {
             // 모든 쉼터 이름을 리스트에 추가
             for(i in 0 until placeArray.length()){
                 val place = placeArray.getJSONObject(i)
-                textList.add(place.getString("R_AREA_NM"))
+                textList.add(place.getString("RESTAREA_NM"))
             }
 
             // 자동완성 텍스트뷰의 어댑터 추가
@@ -414,7 +420,7 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
 
             // 검색 키워드에 해당하는 jsonobject 검색
-            placeArray.findByChildProperty("R_AREA_NM", word)?.let{
+            placeArray.findByChildProperty("RESTAREA_NM", word)?.let{
                 val myItem = itemMap[it]
 
                 // clusterRenderer에서 myItem을 기반으로 마커 검색
@@ -424,7 +430,7 @@ class MainActivity : AppCompatActivity() {
                 // 마커 위치로 카메라 이동
                 googleMap?.moveCamera(
                     CameraUpdateFactory.newLatLngZoom(
-                        LatLng(it.getDouble("LA"), it.getDouble("LO")), DEFAULT_ZOOM_LEVEL
+                        LatLng(it.getDouble("LAT"), it.getDouble("LOT")), DEFAULT_ZOOM_LEVEL
                     )
                 )
                 clusterManager?.cluster()
@@ -435,6 +441,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onBackPressed() {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastBackPressed < 2000) {
+            super.onBackPressed() // 앱 종료
+        } else {
+            lastBackPressed = currentTime
+            reviewApp(this) // 인앱 리뷰
+            Toast.makeText(this, "뒤로 가기를 한번 더 누르면 종료됩니다.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     // 앱이 비활성화될때마다 백그라운드 작업취소
     override fun onStop() {
         super.onStop()
@@ -442,21 +459,40 @@ class MainActivity : AppCompatActivity() {
         task = null
     }
 
+    //  앱 리뷰
+    fun reviewApp(context: Context) {
+        val manager = ReviewManagerFactory.create(context)
+        val request: Task<ReviewInfo> = manager.requestReviewFlow()
+        request.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val reviewInfo: ReviewInfo = task.result
+                manager.launchReviewFlow(context as Activity, reviewInfo)
+                    .addOnCompleteListener { task1: Task<Void?> ->
+                        if (task1.isSuccessful) {
+                            Log.d("TAG", "Review Success")
+                        }
+                    }
+            } else {
+                Log.d("TAG", "Review Error")
+            }
+        }
+    }
+
     // 마커 추가
     fun addMarkers(coolPlace : JSONObject){
         val item = MyItem(
-            LatLng(coolPlace.getDouble("LA"), coolPlace.getDouble("LO")),
-            coolPlace.getString("R_AREA_NM"),
-            coolPlace.getString("R_DETL_ADD"),
+            LatLng(coolPlace.getDouble("LAT"), coolPlace.getDouble("LOT")),
+            coolPlace.getString("RESTAREA_NM"),
+            coolPlace.getString("ROAD_NM_ADDR"),
             BitmapDescriptorFactory.fromBitmap(bitmap)
         )
 
         // clusterManager를 이용해 마커 추가
         clusterManager?.addItem(
             MyItem(
-                LatLng(coolPlace.getDouble("LA"), coolPlace.getDouble("LO")),
-                coolPlace.getString("R_AREA_NM"),
-                coolPlace.getString("R_DETL_ADD"),
+                LatLng(coolPlace.getDouble("LAT"), coolPlace.getDouble("LOT")),
+                coolPlace.getString("RESTAREA_NM"),
+                coolPlace.getString("ROAD_NM_ADDR"),
                 BitmapDescriptorFactory.fromBitmap(bitmap)
             )
         )
