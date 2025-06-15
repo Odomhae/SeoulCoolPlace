@@ -23,6 +23,11 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -55,6 +60,8 @@ class MainActivity : AppCompatActivity() {
 
     private var lastBackPressed: Long = 0
 
+    private var mInterstitialAd: InterstitialAd? = null
+
     lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,6 +92,34 @@ class MainActivity : AppCompatActivity() {
 
         // 현재 위치 버튼 리스너
         myLocationButton.setOnClickListener { onMyLocationButtonClick() }
+
+        // 광고 초기화
+        initializeAds()
+    }
+
+    private fun initializeAds() {
+        // AdMob 초기화
+        MobileAds.initialize(this) {
+            Log.d("test", "Ad loaded")
+        }
+
+        // 전면 광고 로드
+        val adRequest = AdRequest.Builder().build()
+        InterstitialAd.load(
+            this,
+            getString(R.string.REAL_fullscreen_ad_unit_id),
+            adRequest,
+            object : InterstitialAdLoadCallback() {
+                override fun onAdLoaded(interstitialAd: InterstitialAd) {
+                    mInterstitialAd = interstitialAd
+                    mInterstitialAd?.show(this@MainActivity)
+                }
+
+                override fun onAdFailedToLoad(loadAdError: LoadAdError) {
+                    mInterstitialAd = null
+                }
+            }
+        )
     }
 
     // 인터넷 연결 확인
@@ -370,7 +405,7 @@ class MainActivity : AppCompatActivity() {
             // 모든 쉼터 이름을 리스트에 추가
             for(i in 0 until placeArray.length()){
                 val place = placeArray.getJSONObject(i)
-                textList.add(place.getString("RESTAREA_NM"))
+                textList.add(place.getString("R_AREA_NM"))
             }
 
             // 자동완성 텍스트뷰의 어댑터 추가
@@ -420,7 +455,7 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
 
             // 검색 키워드에 해당하는 jsonobject 검색
-            placeArray.findByChildProperty("RESTAREA_NM", word)?.let{
+            placeArray.findByChildProperty("R_AREA_NM", word)?.let{
                 val myItem = itemMap[it]
 
                 // clusterRenderer에서 myItem을 기반으로 마커 검색
@@ -430,7 +465,7 @@ class MainActivity : AppCompatActivity() {
                 // 마커 위치로 카메라 이동
                 googleMap?.moveCamera(
                     CameraUpdateFactory.newLatLngZoom(
-                        LatLng(it.getDouble("LAT"), it.getDouble("LOT")), DEFAULT_ZOOM_LEVEL
+                        LatLng(it.getDouble("LAT"), it.getDouble("LON")), DEFAULT_ZOOM_LEVEL
                     )
                 )
                 clusterManager?.cluster()
@@ -481,18 +516,18 @@ class MainActivity : AppCompatActivity() {
     // 마커 추가
     fun addMarkers(coolPlace : JSONObject){
         val item = MyItem(
-            LatLng(coolPlace.getDouble("LAT"), coolPlace.getDouble("LOT")),
-            coolPlace.getString("RESTAREA_NM"),
-            coolPlace.getString("ROAD_NM_ADDR"),
+            LatLng(coolPlace.getDouble("LAT"), coolPlace.getDouble("LON")),
+            coolPlace.getString("R_AREA_NM"),
+            coolPlace.getString("R_DETL_ADD"),
             BitmapDescriptorFactory.fromBitmap(bitmap)
         )
 
         // clusterManager를 이용해 마커 추가
         clusterManager?.addItem(
             MyItem(
-                LatLng(coolPlace.getDouble("LAT"), coolPlace.getDouble("LOT")),
-                coolPlace.getString("RESTAREA_NM"),
-                coolPlace.getString("ROAD_NM_ADDR"),
+                LatLng(coolPlace.getDouble("LAT"), coolPlace.getDouble("LON")),
+                coolPlace.getString("R_AREA_NM"),
+                coolPlace.getString("R_DETL_ADD"),
                 BitmapDescriptorFactory.fromBitmap(bitmap)
             )
         )

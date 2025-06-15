@@ -11,4 +11,11 @@
 
 <!--    <string name="google_maps_key">AIzaSyA0mgiiq8G4d3SRa9YiZ3aZbXiFYfwgz9I</string>-->
 
+    <string name="TEST_admob_app_id"> ca-app-pub-3940256099942544~3347511713</string>
+    <string name="TEST_fullscreen_ad_unit_id">ca-app-pub-3940256099942544/1033173712</string>
+
+    <string name="REAL_admob_app_id">ca-app-pub-6729344454320392~2100032228</string>
+    <string name="REAL_fullscreen_ad_unit_id">ca-app-pub-6729344454320392/5348177940</string>
+
+
 </resources>
