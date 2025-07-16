@@ -14,15 +14,26 @@ import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
 import android.os.AsyncTask
-import androidx.appcompat.app.AppCompatActivity
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Layout
 import android.text.TextUtils
 import android.util.Log
+import android.view.View
+import android.view.WindowInsets
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
+import androidx.core.graphics.Insets
+import androidx.core.view.OnApplyWindowInsetsListener
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.databinding.DataBindingUtil
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
@@ -32,20 +43,25 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.MapView
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.Task
 import com.google.android.play.core.review.ReviewInfo
 import com.google.android.play.core.review.ReviewManagerFactory
 import com.google.maps.android.clustering.ClusterManager
-import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.search_bar.view.*
+import com.odom.seoulcoolplace.databinding.ActivityMainBinding
+//import kotlinx.android.synthetic.main.activity_main.*
+//import kotlinx.android.synthetic.main.search_bar.view.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URL
 import kotlin.system.exitProcess
 
+
 class MainActivity : AppCompatActivity() {
+
+    lateinit var binding: ActivityMainBinding
 
     var PERMISSIONS = arrayOf(
         Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -83,18 +99,52 @@ class MainActivity : AppCompatActivity() {
             alertDialog.show()
         }
 
-        setContentView(R.layout.activity_main)
-        mapView.onCreate(savedInstanceState)
+
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+
+       // setContentView(R.layout.activity_main)
+        binding.mapView.onCreate(savedInstanceState)
         // MapsInitializer.initialize(applicationContext)
 
         //권한 요청
         ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_PERMISSION_CODE)
 
         // 현재 위치 버튼 리스너
-        myLocationButton.setOnClickListener { onMyLocationButtonClick() }
+        binding.myLocationButton.setOnClickListener { onMyLocationButtonClick() }
 
         // 광고 초기화
         initializeAds()
+    }
+
+    override fun onPostCreate(savedInstanceState: Bundle?) {
+        super.onPostCreate(savedInstanceState)
+
+        val contentView: View = this.findViewById(android.R.id.content)
+        ViewCompat.setOnApplyWindowInsetsListener(
+            contentView
+        ) { v, insets ->
+            val innerPadding: Insets = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            v.setPadding(0, innerPadding.top, 0, innerPadding.bottom)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                val isLightStatusBars = AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_YES
+                if (isLightStatusBars) {
+                    v.setBackgroundColor(resources.getColor(R.color.white))
+                } else {
+                    v.setBackgroundColor(resources.getColor(R.color.black))
+                }
+
+            }
+
+
+            insets
+        }
+
+
+        val isLightStatusBars = AppCompatDelegate.getDefaultNightMode() != AppCompatDelegate.MODE_NIGHT_YES
+        val compat = WindowInsetsControllerCompat(this.window, this.window.decorView)
+        compat.isAppearanceLightStatusBars = isLightStatusBars
+        compat.isAppearanceLightNavigationBars = isLightStatusBars
     }
 
     private fun initializeAds() {
@@ -157,7 +207,7 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     fun initMap(){
         // 맵뷰에서 구글 맵을 불러옴
-        mapView.getMapAsync {
+        binding.mapView.getMapAsync {
 
             // cluster 객체 초기화
             clusterManager = ClusterManager(this, it)
@@ -266,13 +316,13 @@ class MainActivity : AppCompatActivity() {
     // 맵뷰의 라이프사이클 함수 호출
     override fun onResume() {
         super.onResume()
-        mapView.onResume()
+        binding.mapView!!.onResume()
         //  앱 AsyncTask 중지되었으면
         if(CoolPlaceTask().status == AsyncTask.Status.FINISHED)
             CoolPlaceTask().execute()
     }
     override fun onPause() {
-        mapView.onPause()
+        binding.mapView!!.onPause()
         super.onPause()
         // 앱 AsyncTask도 pause
         if(CoolPlaceTask().status == AsyncTask.Status.RUNNING)
@@ -281,7 +331,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        mapView.onDestroy()
+        binding.mapView!!.onDestroy()
         // 앱 종료시 AsyncTask도 종료
         if(CoolPlaceTask().status == AsyncTask.Status.RUNNING)
             CoolPlaceTask().cancel(true)
@@ -289,7 +339,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onLowMemory() {
         super.onLowMemory()
-        mapView.onLowMemory()
+        binding.mapView!!.onLowMemory()
     }
 
     // 서울 열린 데이터 광장 발급 키
@@ -418,9 +468,9 @@ class MainActivity : AppCompatActivity() {
             asyncDialog.dismiss()
 
             // 자동완성이 시작되는 글자수
-            searchBar.autoCompleteTextView.threshold = 1
+            binding.searchBar.autoCompleteTextView.threshold = 1
             // 자동완성 텍스트뷰의 어댑터 설정
-            searchBar.autoCompleteTextView.setAdapter(adapter)
+            binding.searchBar.autoCompleteTextView.setAdapter(adapter)
         }
     }
 
@@ -448,8 +498,8 @@ class MainActivity : AppCompatActivity() {
 
 
         // searchbar 검색 리스너 설정
-        searchBar.imageView.setOnClickListener {
-            val word = searchBar.autoCompleteTextView.text.toString()
+        binding.searchBar.imageView.setOnClickListener {
+            val word = binding.searchBar.autoCompleteTextView.text.toString()
             // 값이 없으면 그대로 리턴
             if(TextUtils.isEmpty(word))
                 return@setOnClickListener
@@ -472,7 +522,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // 검색 텍스트 초기화
-            searchBar.autoCompleteTextView.setText("")
+            binding.searchBar.autoCompleteTextView.setText("")
         }
     }
 
